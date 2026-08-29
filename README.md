@@ -1,16 +1,16 @@
-# CheatSheetForge — מחולל דף נוסחאות
+# CheatSheetForge
 
-מוצר שמקבל מבחני עבר פתורים (PDF) ומייצר דף נוסחאות מסונן, מסווג וללא כפילויות, מוכן להדפסה.
+A product that takes solved past exams (PDF) and generates a filtered, categorized, deduplicated formula/cheat sheet, ready to print.
 
-פרויקט נבנה במסגרת סדנת AI, מלגת מושל.
+Built as part of an AI workshop, Moshel scholarship program.
 
-## תיעוד
+## Documentation
 
-כל מסמכי התכנון נמצאים בתיקיית [`docs/`](./docs):
+All planning docs live in [`docs/`](./docs) (currently in Hebrew):
 
-- [`docs/00-index.md`](./docs/00-index.md) — נקודת הכניסה למסמך ה-PRD המלא
-- [`docs/work-plan.md`](./docs/work-plan.md) — לוח זמנים לעבודה עד ההצגה
+- [`docs/00-index.md`](./docs/00-index.md) — entry point to the full PRD
+- [`docs/work-plan.md`](./docs/work-plan.md) — timeline leading up to the demo
 
-## סטטוס
+## Status
 
-תכנון ראשוני (PRD) — טרם החל מימוש.
+Initial planning (PRD) — implementation not started yet.
