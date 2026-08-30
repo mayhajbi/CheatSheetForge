@@ -1,0 +1,61 @@
+{
+  "course": "מערכות הפעלה",
+  "syllabus_topics": [
+    "עקביות אחרי קריסה",
+    "ביצועי דיסק",
+    "סנכרון תהליכים",
+    "תזמון תהליכים"
+  ],
+  "questions": [
+    {
+      "id": "q_0001",
+      "source_file": "exam_2023_A.pdf",
+      "source_label": "מועד א 2023",
+      "type": "closed",
+      "topic": "עקביות אחרי קריסה",
+      "question_text": "מערכת קבצים journaling כותבת קודם ל-log ורק אחר כך ל-disk המקורי. נכון/לא נכון?",
+      "answer_text": "נכון.",
+      "has_answer": true
+    },
+    {
+      "id": "q_0002",
+      "source_file": "exam_2022_B.pdf",
+      "source_label": "מועד ב 2022",
+      "type": "closed",
+      "topic": "עקביות אחרי קריסה",
+      "question_text": "ב-journaling file system, הכתיבה מתבצעת קודם ל-log ולאחר מכן לדיסק. האם זה נכון?",
+      "answer_text": "כן, נכון -- זהו העיקרון של write-ahead logging.",
+      "has_answer": true
+    },
+    {
+      "id": "q_0003",
+      "source_file": "exam_2023_A.pdf",
+      "source_label": "מועד א 2023",
+      "type": "open_calc",
+      "topic": "ביצועי דיסק",
+      "question_text": "דיסק עם seek time של 4ms, rotational latency של 3ms ו-transfer time של 1ms. חשבו את זמן הגישה הממוצע.",
+      "answer_text": "avg_access_time = 4 + 3 + 1 = 8ms",
+      "has_answer": true
+    },
+    {
+      "id": "q_0004",
+      "source_file": "exam_2021_A.pdf",
+      "source_label": "מועד א 2021",
+      "type": "open_calc",
+      "topic": "ביצועי דיסק",
+      "question_text": "דיסק עם seek time של 6ms, rotational latency של 2ms ו-transfer time של 0.5ms. מהו זמן הגישה הממוצע?",
+      "answer_text": "avg_access_time = 6 + 2 + 0.5 = 8.5ms",
+      "has_answer": true
+    },
+    {
+      "id": "q_0005",
+      "source_file": "exam_2022_B.pdf",
+      "source_label": "מועד ב 2022",
+      "type": "code",
+      "topic": "סנכרון תהליכים",
+      "question_text": "ממשו פונקציית producer-consumer עם mutex וסמפורים.",
+      "answer_text": "void producer() { sem_wait(&empty); mutex_lock(&lock); insert_item(); mutex_unlock(&lock); sem_post(&full); }",
+      "has_answer": true
+    }
+  ]
+}

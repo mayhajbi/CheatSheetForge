@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/
+
+# Env / secrets
+.env
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# OS
+.DS_Store
+
+# ריצה מקומית -- קבצים זמניים של session (לא אמורים להיכתב בתוך הריפו בפועל,
+# אבל למקרה שמישהו מריץ בלי temp dir מוגדר)
+/tmp_sessions/
