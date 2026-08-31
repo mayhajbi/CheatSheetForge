@@ -24,6 +24,7 @@ import uuid
 from pathlib import Path
 from typing import Dict, List
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -34,6 +35,10 @@ from backend.export.docx_builder import build_docx
 from backend.export.pdf_builder import build_pdf
 from backend.ingestion.pdf_extract import extract_many, extract_pdf
 from backend.schemas import ExportFormat, MergedBank, UploadLimits
+
+# מפתחות ה-API נטענים מקובץ .env מקומי (לא נכנס ל-git). ב-Railway הם מוגדרים
+# כמשתני סביבה של השירות ואז אין .env והקריאה הזו פשוט לא עושה כלום.
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 app = FastAPI(title="CheatSheetForge API")
 
