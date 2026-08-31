@@ -1,0 +1,60 @@
+{
+  "syllabus_topics": [
+    "עקביות אחרי קריסה",
+    "ביצועי דיסק",
+    "סנכרון תהליכים",
+    "ניהול זיכרון"
+  ],
+  "questions": [
+    {
+      "id": "q_0001",
+      "source_file": "exam_2023_A.pdf",
+      "source_label": "מועד א 2023",
+      "type": "closed",
+      "topic": "עקביות אחרי קריסה",
+      "question_text": "לאחר קריסת מערכת, journaling מבטיח שכל כתיבה שהתחילה לפני הקריסה תושלם במלואה.",
+      "answer_text": "לא נכון — journaling מבטיח עקביות של מטא-דאטה/טרנזקציות לפי מדיניות, לא בהכרח השלמת כל כתיבה.",
+      "has_answer": true
+    },
+    {
+      "id": "q_0002",
+      "source_file": "exam_2022_B.pdf",
+      "source_label": "מועד ב 2022",
+      "type": "closed",
+      "topic": "עקביות אחרי קריסה",
+      "question_text": "Journaling מבטיח שכל כתיבה שהחלה לפני קריסה תושלם תמיד.",
+      "answer_text": "שגוי.",
+      "has_answer": true
+    },
+    {
+      "id": "q_0003",
+      "source_file": "exam_2023_A.pdf",
+      "source_label": "מועד א 2023",
+      "type": "open_calc",
+      "topic": "ביצועי דיסק",
+      "question_text": "דיסק עם seek ממוצע 8ms, latency 4ms, וקצב העברה 100MB/s. מהו הזמן לקריאת בלוק של 4KB?",
+      "answer_text": "T ≈ 8 + 4 + (4KB/100MB/s) ≈ 12.04ms",
+      "has_answer": true
+    },
+    {
+      "id": "q_0004",
+      "source_file": "exam_2022_B.pdf",
+      "source_label": "מועד ב 2022",
+      "type": "open_calc",
+      "topic": "ביצועי דיסק",
+      "question_text": "אותו חישוב לדיסק עם seek 10ms, latency 5ms, העברה 50MB/s, בלוק 8KB.",
+      "answer_text": "T ≈ 10 + 5 + (8KB/50MB/s) ≈ 15.16ms",
+      "has_answer": true
+    },
+    {
+      "id": "q_0005",
+      "source_file": "exam_2023_A.pdf",
+      "source_label": "מועד א 2023",
+      "type": "code",
+      "topic": "סנכרון תהליכים",
+      "question_text": "ממשו פתרון לבעיית producer-consumer עם mutex ו-condition variables.",
+      "answer_text": "ראו מימוש מלא בקובץ המקור (קוד ארוך).",
+      "has_answer": true
+    }
+  ]
+}
