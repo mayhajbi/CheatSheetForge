@@ -21,7 +21,7 @@ from backend.schemas import ClassificationBatch, ClassifiedQuestion, MergedBank,
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = os.environ.get("DEDUP_MODEL", "claude-sonnet-4-5")
+MODEL_NAME = os.environ.get("DEDUP_MODEL", "claude-sonnet-5")
 
 SYSTEM_PROMPT = """\
 את/ה מנוע איחוד כפילויות עבור בנק שאלות אקדמי (דף נוסחאות).

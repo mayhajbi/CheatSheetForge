@@ -119,11 +119,15 @@ async def upload(
 
     try:
         batch = classify_exams(exam_docs, syllabus_doc)
-    except RuntimeError as exc:
-        # חוסר מפתח API הוא תקלת הגדרה, לא קריסה -- מוחזר כשגיאה מוסברת
-        # במקום 500 עם גוף טקסט שהפרונט לא יודע לקרוא.
+    except Exception as exc:  # noqa: BLE001 -- כל כשל סיווג מוחזר מוסבר למשתמש
+        # מפתח API חסר/שגוי, שגיאת רשת או תשובת מודל לא תקינה -- כל אלה תקלות
+        # תפעוליות ולא קריסה. מוחזר 503 עם הסיבה, במקום 500 עם גוף טקסט
+        # שהפרונט לא יודע לקרוא (ראו פרק 07: אין כשל שקט).
         shutil.rmtree(session_dir, ignore_errors=True)
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=503,
+            detail=f"שלב הסיווג נכשל: {type(exc).__name__}: {exc}",
+        ) from exc
 
     batch.course = course
 

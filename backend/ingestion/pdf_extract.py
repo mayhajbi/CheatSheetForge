@@ -58,6 +58,43 @@ def label_from_filename(filename: str) -> str:
     return re.sub(r"\s+", " ", stem_norm).strip() or stem
 
 
+_FINAL_LETTERS = "םןךףץ"
+_LATIN_RUN = re.compile(r"[A-Za-z0-9][A-Za-z0-9.,:'\"()\-/]*[A-Za-z0-9]|[A-Za-z0-9]")
+
+
+def _looks_reversed(text: str) -> bool:
+    """Hebrew extracted in visual order puts final letters at the START of words.
+
+    In real Hebrew, ם/ן/ך/ף/ץ only ever end a word, so counting which end they
+    land on tells us whether pdfplumber handed us the line back-to-front.
+    """
+    starts = ends = 0
+    for token in text.split():
+        if token[0] in _FINAL_LETTERS:
+            starts += 1
+        if token[-1] in _FINAL_LETTERS:
+            ends += 1
+    return starts > ends
+
+
+def fix_rtl_visual_order(text: str) -> str:
+    """Restore logical order for Hebrew PDFs extracted in visual (RTL) order.
+
+    Reverses each line, then flips Latin/digit runs back, so "SSD יננוכ"
+    becomes "כונני SSD" instead of "DSS כונני". Text that already reads
+    correctly is returned untouched.
+    """
+    if not _looks_reversed(text):
+        return text
+
+    fixed_lines = []
+    for line in text.splitlines():
+        flipped = line[::-1]
+        flipped = _LATIN_RUN.sub(lambda m: m.group(0)[::-1], flipped)
+        fixed_lines.append(flipped.strip())
+    return "\n".join(fixed_lines)
+
+
 def extract_pdf(
     path: str | Path,
     *,

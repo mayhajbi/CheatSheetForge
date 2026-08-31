@@ -14,7 +14,7 @@ from google.genai import types
 from backend.ingestion.pdf_extract import ExtractedDocument, parse_syllabus_topics
 from backend.schemas import ClassifiedBatch, ClassifiedQuestion, QuestionType
 
-DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 DEFAULT_MAX_TOKENS = int(os.getenv("CLASSIFY_MAX_TOKENS", "16384"))
 
 _SYSTEM = """\
