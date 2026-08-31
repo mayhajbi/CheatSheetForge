@@ -14,8 +14,13 @@ import argparse
 import json
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from backend.classification.classifier import classify_exams
 from backend.ingestion.pdf_extract import extract_many, extract_pdf
+
+# Load secrets from repo-root .env (never commit that file).
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 
 def main() -> None:
