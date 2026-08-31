@@ -1,71 +1,53 @@
-"""
-חוזה הנתונים המשותף בין שלושת מודולי הליבה (ingestion/classification -> dedup -> export).
-כל שלושת המודולים מייבאים מכאן ולא מגדירים מבנים משלהם.
-ראו docs/PRD.md פרק 12 להסבר המלא.
+"""Shared data contract for CheatSheetForge (see docs/12-team-split-and-data-contract.md).
 
-שינוי שדה כאן משפיע על כל השרשרת -- לתאם עם שני חברי הצוות האחרים לפני עריכה.
+Person A produces ClassifiedQuestion.
+Person B consumes that and produces MergedBank.
+Person C consumes MergedBank for export/frontend.
 """
 
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class QuestionType(str, Enum):
-    """שלושת סוגי השאלות הנתמכים -- אין ערך רביעי."""
-
     CLOSED = "closed"
     OPEN_CALC = "open_calc"
     CODE = "code"
 
 
-# ---------------------------------------------------------------------------
-# שלב 1 -> 2: פלט הסיווג (מיוצר ע"י ingestion+classification, נצרך ע"י dedup)
-# ---------------------------------------------------------------------------
+# --- Stage 1 → 2: classification output (A produces, B consumes) ---
 
 
 class ClassifiedQuestion(BaseModel):
-    """שאלה בודדת, אחרי חילוץ מ-PDF וסיווג ע"י המודל."""
-
-    id: str = Field(..., description="מזהה ייחודי, לדוגמה q_0001")
-    source_file: str = Field(..., description="שם קובץ המקור, לדוגמה exam_2023_A.pdf")
-    source_label: str = Field(..., description="תווית מקור קריאה לאדם, לדוגמה 'מועד א 2023'")
+    id: str = Field(..., description="Stable id, e.g. q_0001")
+    source_file: str
+    source_label: str
     type: QuestionType
-    topic: str = Field(..., description="נושא מתוך קובץ הסילבוס שהועלה -- לא ערך חופשי")
+    topic: str = Field(..., description="Must come from the uploaded syllabus")
     question_text: str
-    answer_text: str
-    has_answer: bool = Field(
-        default=True,
-        description=(
-            "נשמר לצורך שקיפות. אמור להיות True תמיד ב-MVP כי הקלט חייב לכלול "
-            "פתרונות. אם False בפועל (כשל חילוץ) -- הפריט מסומן ולא מוזרם לאיחוד."
-        ),
-    )
+    answer_text: str = ""
+    has_answer: bool = True
+
+    @model_validator(mode="after")
+    def answer_consistency(self) -> ClassifiedQuestion:
+        if self.has_answer and not (self.answer_text or "").strip():
+            # Prefer explicit missing-answer flag over inventing content.
+            self.has_answer = False
+        return self
 
 
-class ClassificationBatch(BaseModel):
-    """הפלט המלא של שלב הסיווג עבור אצוות קבצים אחת."""
+class ClassifiedBatch(BaseModel):
+    """Wrapper for a full classification run (exams + syllabus topics used)."""
 
-    course: str
-    syllabus_topics: List[str] = Field(default_factory=list)
-    questions: List[ClassifiedQuestion]
-
-
-# ---------------------------------------------------------------------------
-# שלב 2 -> 3: פלט האיחוד (מיוצר ע"י dedup, נצרך ע"י export)
-# ---------------------------------------------------------------------------
+    syllabus_topics: list[str] = Field(default_factory=list)
+    questions: list[ClassifiedQuestion] = Field(default_factory=list)
 
 
-class ClosedItem(BaseModel):
-    type: QuestionType = QuestionType.CLOSED
-    topic: str
-    question_text: str
-    correct_answer: str
-    distractors: List[str] = Field(default_factory=list)
-    sources: List[str] = Field(default_factory=list)
+# --- Stage 2 → 3: merge output (B produces, C consumes) ---
 
 
 class OpenCalcVariant(BaseModel):
@@ -74,56 +56,40 @@ class OpenCalcVariant(BaseModel):
     source_label: str
 
 
-class OpenCalcItem(BaseModel):
-    type: QuestionType = QuestionType.OPEN_CALC
+class OpenCalcRepresentative(BaseModel):
+    question_text: str
+    answer_text: str
+    source_label: str
+
+
+class ClosedItem(BaseModel):
+    type: Literal["closed"] = "closed"
     topic: str
-    representative: OpenCalcVariant
-    variants: List[OpenCalcVariant] = Field(default_factory=list)
+    question_text: str
+    correct_answer: str
+    distractors: list[str] = Field(default_factory=list)
+    sources: list[str] = Field(default_factory=list)
+
+
+class OpenCalcItem(BaseModel):
+    type: Literal["open_calc"] = "open_calc"
+    topic: str
+    representative: OpenCalcRepresentative
+    variants: list[OpenCalcVariant] = Field(default_factory=list)
 
 
 class CodeItem(BaseModel):
-    type: QuestionType = QuestionType.CODE
+    type: Literal["code"] = "code"
     topic: str
     reference_only: bool = True
-    code_snippet: Optional[str] = None
-    sources: List[str] = Field(default_factory=list)
+    code_snippet: str | None = None
+    sources: list[str] = Field(default_factory=list)
 
 
 MergedItem = ClosedItem | OpenCalcItem | CodeItem
 
 
 class MergedBank(BaseModel):
-    """הבנק המרוכז -- הקלט למודול הייצוא."""
-
     course: str
-    max_pages: int
-    items: List[dict] = Field(
-        ...,
-        description=(
-            "כל איבר הוא ClosedItem / OpenCalcItem / CodeItem לפי שדה type. "
-            "נשמר כ-dict גנרי כדי לאפשר union פשוט ב-JSON; ראו dedup/merge_engine.py "
-            "לפענוח בפועל לפי type."
-        ),
-    )
-
-
-# ---------------------------------------------------------------------------
-# בקשות/תגובות API (main.py)
-# ---------------------------------------------------------------------------
-
-
-class UploadLimits(BaseModel):
-    max_files: int = 15
-    max_total_mb: int = 5
-
-
-class ExportFormat(str, Enum):
-    DOCX = "docx"
-    PDF = "pdf"
-
-
-class ExportRequest(BaseModel):
-    format: ExportFormat
-    max_pages: int
-    font_name: str = "Arial"
-    font_size_pt: int = 11
+    max_pages: int = Field(..., ge=1)
+    items: list[MergedItem] = Field(default_factory=list)
