@@ -117,7 +117,14 @@ async def upload(
     # קובץ ללא שכבת טקסט עדיין נשלח למודל כ-PDF (fallback סריקה) ולכן אינו "כשל".
     failed_files = [d.source_file for d in exam_docs if not d.extraction_ok and not d.path]
 
-    batch = classify_exams(exam_docs, syllabus_doc)
+    try:
+        batch = classify_exams(exam_docs, syllabus_doc)
+    except RuntimeError as exc:
+        # חוסר מפתח API הוא תקלת הגדרה, לא קריסה -- מוחזר כשגיאה מוסברת
+        # במקום 500 עם גוף טקסט שהפרונט לא יודע לקרוא.
+        shutil.rmtree(session_dir, ignore_errors=True)
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
     batch.course = course
 
     _sessions[session_id] = {
