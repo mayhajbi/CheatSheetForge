@@ -1,23 +1,23 @@
 """
 נקודת הכניסה הראשית -- FastAPI. מחבר את שלושת הזרמים (ingestion+classification,
-dedup, export) לזרימת משתמש אחת, לפי סעיף 3.5 / פרק 11 ב-PRD.
+dedup, export) לזרימת משתמש אחת, לפי פרק 11/12 ב-PRD.
 
 זרימה (session-based בלבד -- ללא DB, ראו פרק 06/07):
-1. POST /api/upload -- מקבל PDFs + סילבוס + max_pages, מחלץ ומסווג, שומר
-   תוצאה זמנית בזיכרון תחת session_id (לא בדיסק, לא ב-DB).
-2. POST /api/merge/{session_id} -- מריץ את מנוע האיחוד על הסיווג שנשמר.
-3. GET  /api/preview/{session_id} -- מחזיר את הבנק המרוכז לתצוגה מקדימה.
-4. POST /api/preview/{session_id}/remove -- מסיר פריטים מהבנק (MVP: הסרה בלבד).
-5. POST /api/export/{session_id} -- מייצא docx/pdf ומחזיר קובץ להורדה.
-6. DELETE /api/session/{session_id} -- מוחק את כל הנתונים הזמניים (גם רץ
-   אוטומטית אחרי הורדת הקובץ הסופי -- ראו הערת פרטיות בפרק 07).
+1. POST /api/upload -- PDFs + סילבוס + max_pages -> חילוץ + סיווג.
+2. POST /api/merge/{session_id} -- מנוע האיחוד על הסיווג שנשמר.
+3. GET  /api/preview/{session_id} -- הבנק המרוכז לתצוגה מקדימה.
+4. POST /api/preview/{session_id}/remove -- הסרת פריטים (MVP: הסרה בלבד).
+5. POST /api/export/{session_id} -- ייצוא docx/pdf להורדה.
+6. DELETE /api/session/{session_id} -- מחיקת כל הנתונים הזמניים (פרק 07).
 
-הערה: אחסון ה-session הוא in-memory (dict) לפשטות MVP. ל-production אמיתי
-(מעבר למופע יחיד) יש להחליף ב-Redis עם TTL, אך זה מחוץ לסקופ ה-hackathon.
+אחסון ה-session הוא in-memory (dict) לפשטות MVP.
+# ponytail: dict גלובלי -- מספיק למופע יחיד בדמו; ל-production מרובה מופעים
+# יש להחליף ב-Redis עם TTL.
 """
 
 from __future__ import annotations
 
+import os
 import shutil
 import tempfile
 import uuid
@@ -28,11 +28,11 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
-from backend.dedup.merge_engine import merge_batch
+from backend.classification.classifier import classify_exams
+from backend.dedup.merge_engine import merge_batch, merge_batch_offline
 from backend.export.docx_builder import build_docx
 from backend.export.pdf_builder import build_pdf
-from backend.ingestion.pdf_extract import extract_batch, extract_syllabus
-from backend.classification.classifier import classify_batch
+from backend.ingestion.pdf_extract import extract_many, extract_pdf
 from backend.schemas import ExportFormat, MergedBank, UploadLimits
 
 app = FastAPI(title="CheatSheetForge API")
@@ -46,7 +46,6 @@ app.add_middleware(
 
 UPLOAD_LIMITS = UploadLimits()  # 15 קבצים / 5MB -- ברירת מחדל לכיול, ראו פרק 06/10
 
-# --- אחסון session זמני בזיכרון בלבד (ראו הערת פרטיות למעלה) ---
 _sessions: Dict[str, dict] = {}
 
 
@@ -54,6 +53,20 @@ def _session_dir(session_id: str) -> Path:
     d = Path(tempfile.gettempdir()) / "cheatsheet-forge" / session_id
     d.mkdir(parents=True, exist_ok=True)
     return d
+
+
+def _get_session(session_id: str) -> dict:
+    session = _sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="session לא נמצא")
+    return session
+
+
+def _get_merged(session_id: str) -> MergedBank:
+    session = _get_session(session_id)
+    if not session.get("merged"):
+        raise HTTPException(status_code=404, detail="אין בנק מאוחד ל-session זה")
+    return session["merged"]
 
 
 @app.post("/api/upload")
@@ -75,7 +88,6 @@ async def upload(
 
     total_bytes = 0
     saved_paths: list[Path] = []
-    source_labels: dict[str, str] = {}
 
     for uf in exam_files:
         content = await uf.read()
@@ -86,96 +98,85 @@ async def upload(
                 status_code=400,
                 detail=f"חריגה ממגבלת הגודל הכוללת ({UPLOAD_LIMITS.max_total_mb}MB).",
             )
-        dest = session_dir / uf.filename
+        dest = session_dir / Path(uf.filename).name
         dest.write_bytes(content)
         saved_paths.append(dest)
-        source_labels[uf.filename] = Path(uf.filename).stem
 
-    syllabus_bytes = await syllabus_file.read()
-    syllabus_path = session_dir / syllabus_file.filename
-    syllabus_path.write_bytes(syllabus_bytes)
+    syllabus_path = session_dir / Path(syllabus_file.filename).name
+    syllabus_path.write_bytes(await syllabus_file.read())
 
-    extraction = extract_batch(saved_paths)
-    syllabus_text = extract_syllabus(syllabus_path)
-    # הערה: חילוץ נושאי הסילבוס בפועל דורש קריאת LLM נוספת/parsing ייעודי;
-    # לצורך ה-MVP מניחים רשימת שורות לא-ריקות כנושאים גולמיים.
-    syllabus_topics = [line.strip() for line in syllabus_text.splitlines() if line.strip()]
+    exam_docs = extract_many(saved_paths)
+    syllabus_doc = extract_pdf(syllabus_path)
 
-    if extraction.failed:
-        failed_names = ", ".join(f.filename for f in extraction.failed)
-        # לא כשל שקט: מוחזר למשתמש, העיבוד ממשיך עם שאר הקבצים (פרק 07)
-        pass
+    # כשל חילוץ אינו שקט (פרק 07): הקובץ מדווח למשתמש, השאר ממשיכים.
+    # קובץ ללא שכבת טקסט עדיין נשלח למודל כ-PDF (fallback סריקה) ולכן אינו "כשל".
+    failed_files = [d.source_file for d in exam_docs if not d.extraction_ok and not d.path]
 
-    batch = classify_batch(
-        course=course,
-        syllabus_topics=syllabus_topics,
-        extracted_files=extraction.succeeded,
-        source_labels=source_labels,
-    )
+    batch = classify_exams(exam_docs, syllabus_doc)
+    batch.course = course
 
     _sessions[session_id] = {
         "course": course,
         "max_pages": max_pages,
         "classification": batch,
-        "failed_files": [f.filename for f in extraction.failed],
+        "failed_files": failed_files,
         "merged": None,
     }
 
     return {
         "session_id": session_id,
         "questions_found": len(batch.questions),
-        "failed_files": _sessions[session_id]["failed_files"],
+        "syllabus_topics": batch.syllabus_topics,
+        "failed_files": failed_files,
     }
 
 
 @app.post("/api/merge/{session_id}")
 def merge(session_id: str):
-    session = _sessions.get(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="session לא נמצא")
+    session = _get_session(session_id)
 
-    merged = merge_batch(session["classification"], max_pages=session["max_pages"])
+    # מנוע האיחוד האמיתי דורש מפתח API. בלעדיו לא נכשלים בשקט ולא מתחזים
+    # לאיחוד סמנטי -- נופלים למיזוג offline ומדווחים על כך במפורש ב-dedup_mode.
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        merged = merge_batch(session["classification"], max_pages=session["max_pages"])
+        session["dedup_mode"] = "llm"
+    else:
+        merged = merge_batch_offline(
+            session["classification"], max_pages=session["max_pages"]
+        )
+        session["dedup_mode"] = "offline"
+
     session["merged"] = merged
-    return merged
+    return {"dedup_mode": session["dedup_mode"], **merged.model_dump()}
 
 
 @app.get("/api/preview/{session_id}")
 def preview(session_id: str):
-    session = _sessions.get(session_id)
-    if not session or not session["merged"]:
-        raise HTTPException(status_code=404, detail="אין בנק מאוחד ל-session זה")
-    return session["merged"]
+    return _get_merged(session_id)
 
 
 @app.post("/api/preview/{session_id}/remove")
 def remove_items(session_id: str, item_indices: List[int]):
     """MVP: הסרת פריטים בלבד (לא עריכת תוכן -- ראו פרק 3.4 ב-PRD)."""
 
-    session = _sessions.get(session_id)
-    if not session or not session["merged"]:
-        raise HTTPException(status_code=404, detail="אין בנק מאוחד ל-session זה")
-
-    merged: MergedBank = session["merged"]
-    remaining = [
-        item for i, item in enumerate(merged.items) if i not in set(item_indices)
-    ]
-    merged.items = remaining
+    merged = _get_merged(session_id)
+    drop = set(item_indices)
+    merged.items = [item for i, item in enumerate(merged.items) if i not in drop]
     return merged
 
 
 @app.post("/api/export/{session_id}")
-def export(session_id: str, format: ExportFormat, font_name: str = "Arial", font_size_pt: int = 11):
-    session = _sessions.get(session_id)
-    if not session or not session["merged"]:
-        raise HTTPException(status_code=404, detail="אין בנק מאוחד ל-session זה")
+def export(
+    session_id: str,
+    format: ExportFormat,
+    font_name: str = "Arial",
+    font_size_pt: int = 11,
+):
+    merged = _get_merged(session_id)
+    output_path = _session_dir(session_id) / f"cheatsheet.{format.value}"
 
-    session_dir = _session_dir(session_id)
-    output_path = session_dir / f"cheatsheet.{format.value}"
-
-    if format == ExportFormat.DOCX:
-        build_docx(session["merged"], output_path, font_name=font_name, font_size_pt=font_size_pt)
-    else:
-        build_pdf(session["merged"], output_path, font_name=font_name, font_size_pt=font_size_pt)
+    builder = build_docx if format == ExportFormat.DOCX else build_pdf
+    builder(merged, output_path, font_name=font_name, font_size_pt=font_size_pt)
 
     return FileResponse(
         path=output_path,

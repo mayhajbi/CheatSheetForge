@@ -43,8 +43,13 @@ class ClassifiedQuestion(BaseModel):
 class ClassifiedBatch(BaseModel):
     """Wrapper for a full classification run (exams + syllabus topics used)."""
 
+    course: str = ""
     syllabus_topics: list[str] = Field(default_factory=list)
     questions: list[ClassifiedQuestion] = Field(default_factory=list)
+
+
+# Alias kept for the dedup module, which imports the batch under this name.
+ClassificationBatch = ClassifiedBatch
 
 
 # --- Stage 2 → 3: merge output (B produces, C consumes) ---
@@ -93,3 +98,18 @@ class MergedBank(BaseModel):
     course: str
     max_pages: int = Field(..., ge=1)
     items: list[MergedItem] = Field(default_factory=list)
+
+
+# --- API-level models (main.py / export) ---
+
+
+class UploadLimits(BaseModel):
+    """Per-request upload cap (docs/06, decision 15 — calibrate against the model)."""
+
+    max_files: int = 15
+    max_total_mb: int = 5
+
+
+class ExportFormat(str, Enum):
+    DOCX = "docx"
+    PDF = "pdf"

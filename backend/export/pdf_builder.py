@@ -13,6 +13,7 @@ build_pdf_via_weasyprint() למטה כשלד לא-מיושם, שיש להשלי�
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -22,6 +23,22 @@ from backend.schemas import MergedBank
 
 class PdfConversionError(RuntimeError):
     pass
+
+
+# ב-Railway (nixpacks.toml) LibreOffice נמצא ב-PATH. בפיתוח מקומי על Windows
+# הוא בדרך כלל לא, ולכן נבדקת גם התקנת ברירת המחדל.
+_WINDOWS_SOFFICE = Path(r"C:\Program Files\LibreOffice\program\soffice.exe")
+
+
+def _soffice_path() -> str:
+    found = shutil.which("soffice") or shutil.which("soffice.exe")
+    if found:
+        return found
+    if _WINDOWS_SOFFICE.exists():
+        return str(_WINDOWS_SOFFICE)
+    raise PdfConversionError(
+        "LibreOffice (soffice) לא נמצא. התקינו אותו, או ייצאו ל-docx במקום ל-PDF."
+    )
 
 
 def build_pdf_via_libreoffice(
@@ -41,7 +58,7 @@ def build_pdf_via_libreoffice(
 
     result = subprocess.run(
         [
-            "soffice",
+            _soffice_path(),
             "--headless",
             "--convert-to",
             "pdf",

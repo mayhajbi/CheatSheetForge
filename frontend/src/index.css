@@ -1,0 +1,166 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #f5f5f7;
+  color: #1a1a1a;
+  direction: rtl;
+}
+
+.app-shell {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+.app-header h1 {
+  margin-bottom: 0;
+}
+
+.subtitle {
+  color: #666;
+  margin-top: 4px;
+}
+
+.stepper {
+  display: flex;
+  gap: 16px;
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 24px;
+}
+
+.stepper li {
+  color: #999;
+  font-weight: 600;
+}
+
+.stepper li.active {
+  color: #2f6fed;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+input,
+select {
+  font-size: 14px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+button {
+  background: #2f6fed;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 15px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+button:disabled {
+  background: #9db6f2;
+  cursor: wait;
+}
+
+.notice {
+  background: #eef4ff;
+  border: 1px solid #cfe0ff;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.warning {
+  background: #fff4e5;
+  border: 1px solid #ffdca8;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.error {
+  background: #fdecea;
+  border: 1px solid #f5c2be;
+  color: #a12622;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+}
+
+.hint {
+  color: #666;
+  font-size: 13px;
+}
+
+.item-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item-list li {
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.item-list li.removed {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.item-list label {
+  flex-direction: row;
+  align-items: center;
+  font-weight: normal;
+  gap: 10px;
+}
+
+.badge {
+  background: #eef4ff;
+  color: #2f6fed;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.topic {
+  font-weight: 600;
+}
+
+.preview-text {
+  color: #444;
+  font-size: 13px;
+}

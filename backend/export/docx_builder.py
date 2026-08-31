@@ -73,39 +73,36 @@ def _configure_base_document(doc: Document, font_name: str, font_size_pt: int) -
     rFonts.set(qn("w:cs"), font_name)
 
 
-def _render_closed_item(doc: Document, item: dict) -> None:
-    _add_rtl_paragraph(doc, item["question_text"])
-    _add_rtl_paragraph(doc, f"תשובה נכונה: {item['correct_answer']}")
-    if item.get("distractors"):
-        _add_rtl_paragraph(doc, "תשובות מטעות: " + " / ".join(item["distractors"]))
-    if item.get("sources"):
-        _add_rtl_paragraph(doc, "מקור: " + ", ".join(item["sources"]))
+def _render_closed_item(doc: Document, item) -> None:
+    _add_rtl_paragraph(doc, item.question_text)
+    _add_rtl_paragraph(doc, f"תשובה נכונה: {item.correct_answer}")
+    if item.distractors:
+        _add_rtl_paragraph(doc, "תשובות מטעות: " + " / ".join(item.distractors))
+    if item.sources:
+        _add_rtl_paragraph(doc, "מקור: " + ", ".join(item.sources))
 
 
-def _render_open_calc_item(doc: Document, item: dict) -> None:
-    rep = item["representative"]
-    _add_rtl_paragraph(doc, rep["question_text"])
-    answer = rep.get("answer_text") or "(לא נמצאה תשובה במקור)"
-    _add_ltr_code_paragraph(doc, answer)
-    _add_rtl_paragraph(doc, f"מקור: {rep['source_label']}")
+def _render_open_calc_item(doc: Document, item) -> None:
+    rep = item.representative
+    _add_rtl_paragraph(doc, rep.question_text)
+    # אין להמציא תוכן (פרק 07): תשובה חסרה מסומנת במפורש.
+    _add_ltr_code_paragraph(doc, rep.answer_text or "(לא נמצאה תשובה במקור)")
+    _add_rtl_paragraph(doc, f"מקור: {rep.source_label}")
 
-    variants = item.get("variants") or []
-    if variants:
-        _add_rtl_paragraph(doc, f"וריאציות נוספות ({len(variants)}):")
-        for v in variants:
-            _add_rtl_paragraph(doc, v["question_text"])
-            v_answer = v.get("answer_text") or "(לא נמצאה תשובה במקור)"
-            _add_ltr_code_paragraph(doc, v_answer)
-            _add_rtl_paragraph(doc, f"מקור: {v['source_label']}")
+    if item.variants:
+        _add_rtl_paragraph(doc, f"וריאציות נוספות ({len(item.variants)}):")
+        for v in item.variants:
+            _add_rtl_paragraph(doc, v.question_text)
+            _add_ltr_code_paragraph(doc, v.answer_text or "(לא נמצאה תשובה במקור)")
+            _add_rtl_paragraph(doc, f"מקור: {v.source_label}")
 
 
-def _render_code_item(doc: Document, item: dict) -> None:
-    sources = ", ".join(item.get("sources", []))
-    if item.get("reference_only", True):
+def _render_code_item(doc: Document, item) -> None:
+    sources = ", ".join(item.sources)
+    if item.reference_only:
         _add_rtl_paragraph(doc, f"שאלת מימוש קוד -- הפניה בלבד למקור: {sources}")
     else:
-        snippet = item.get("code_snippet") or "(קוד חסר במקור)"
-        _add_ltr_code_paragraph(doc, snippet)
+        _add_ltr_code_paragraph(doc, item.code_snippet or "(קוד חסר במקור)")
         _add_rtl_paragraph(doc, f"מקור: {sources}")
 
 
@@ -129,9 +126,9 @@ def build_docx(
 
     _add_rtl_paragraph(doc, f"דף נוסחאות -- {bank.course}", bold=True, size_pt=16)
 
-    items_by_type: dict[str, list[dict]] = {"closed": [], "open_calc": [], "code": []}
+    items_by_type: dict[str, list] = {"closed": [], "open_calc": [], "code": []}
     for item in bank.items:
-        items_by_type.setdefault(item["type"], []).append(item)
+        items_by_type.setdefault(item.type, []).append(item)
 
     for qtype in ("closed", "open_calc", "code"):
         items = items_by_type.get(qtype, [])
@@ -139,9 +136,9 @@ def build_docx(
             continue
         _add_rtl_paragraph(doc, TOPIC_HEADINGS_ORDER[qtype], bold=True, size_pt=13)
 
-        by_topic: dict[str, list[dict]] = {}
+        by_topic: dict[str, list] = {}
         for item in items:
-            by_topic.setdefault(item["topic"], []).append(item)
+            by_topic.setdefault(item.topic, []).append(item)
 
         for topic, topic_items in by_topic.items():
             _add_rtl_paragraph(doc, topic, bold=True, size_pt=12)

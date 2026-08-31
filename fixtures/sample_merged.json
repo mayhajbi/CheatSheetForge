@@ -1,0 +1,37 @@
+{
+  "course": "מערכות הפעלה",
+  "max_pages": 4,
+  "items": [
+    {
+      "type": "closed",
+      "topic": "עקביות אחרי קריסה",
+      "question_text": "מערכת קבצים journaling כותבת קודם ל-log ורק אחר כך לדיסק המקורי (write-ahead logging).",
+      "correct_answer": "נכון",
+      "distractors": ["לא נכון", "רק בחלק מהמערכות"],
+      "sources": ["מועד א 2023", "מועד ב 2022"]
+    },
+    {
+      "type": "open_calc",
+      "topic": "ביצועי דיסק",
+      "representative": {
+        "question_text": "דיסק עם seek time של 4ms, rotational latency של 3ms ו-transfer time של 1ms. חשבו את זמן הגישה הממוצע.",
+        "answer_text": "avg_access_time = seek_time + rotational_latency + transfer_time = 4 + 3 + 1 = 8ms",
+        "source_label": "מועד א 2023"
+      },
+      "variants": [
+        {
+          "question_text": "דיסק עם seek time של 6ms, rotational latency של 2ms ו-transfer time של 0.5ms. מהו זמן הגישה הממוצע?",
+          "answer_text": "avg_access_time = 6 + 2 + 0.5 = 8.5ms",
+          "source_label": "מועד א 2021"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "topic": "סנכרון תהליכים",
+      "reference_only": true,
+      "code_snippet": null,
+      "sources": ["מועד ב 2022"]
+    }
+  ]
+}
