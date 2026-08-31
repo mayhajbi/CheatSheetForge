@@ -1,0 +1,10 @@
+# Railway (Nixpacks) לא כולל LibreOffice כברירת מחדל, וזה נדרש להמרת
+# docx ל-PDF (backend/export/pdf_builder.py). ראו README > פריסה ל-Railway.
+[phases.setup]
+nixPkgs = ["python312", "libreoffice"]
+
+[phases.install]
+cmds = ["pip install -r backend/requirements.txt"]
+
+[start]
+cmd = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"

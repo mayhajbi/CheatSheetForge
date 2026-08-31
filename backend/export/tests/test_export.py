@@ -43,7 +43,7 @@ def test_docx_contains_all_topics(tmp_path):
     doc = Document(str(out))
     all_text = "\n".join(p.text for p in doc.paragraphs)
     for item in bank.items:
-        assert item["topic"] in all_text
+        assert item.topic in all_text
 
 
 @pytest.mark.skipif(shutil.which("soffice") is None, reason="LibreOffice לא מותקן בסביבה זו")
@@ -54,3 +54,31 @@ def test_build_pdf_creates_file(tmp_path):
 
     assert out.exists()
     assert out.stat().st_size > 0
+
+
+def test_hebrew_paragraphs_are_rtl_and_code_lines_are_ltr(tmp_path):
+    """נקודת הסיכון המרכזית בפרויקט (פרק 05): כיווניות נכונה בקובץ שנוצר.
+
+    פסקאות עברית -> bidi=1 ויישור לימין; שורות תשובה/קוד באנגלית -> bidi=0.
+    """
+
+    bank = load_fixture_bank()
+    out = tmp_path / "cheatsheet.docx"
+    build_docx(bank, out)
+
+    doc = Document(str(out))
+    by_dir = {"rtl": [], "ltr": []}
+    for p in doc.paragraphs:
+        xml = p._p.xml
+        if 'w:bidi w:val="1"' in xml:
+            by_dir["rtl"].append(p.text)
+        elif 'w:bidi w:val="0"' in xml:
+            by_dir["ltr"].append(p.text)
+
+    # הכותרת ושאלות העברית בכיוון RTL
+    assert any("דף נוסחאות" in t for t in by_dir["rtl"])
+    assert any("עקביות אחרי קריסה" in t for t in by_dir["rtl"])
+
+    # שורת הנוסחה/קוד באנגלית בשורה נפרדת בכיוון LTR (ולא מעורבת בעברית)
+    assert any("avg_access_time" in t for t in by_dir["ltr"])
+    assert all("avg_access_time" not in t for t in by_dir["rtl"])
